@@ -1,6 +1,6 @@
 import type { DeviceNode, MqttPayloadType } from "../../types/hypervision";
 import { useEditorStore } from "../../store/editorStore";
-import { getDeviceCatalogEntry } from "../../constants/deviceCatalog";
+import { DEFAULT_NODE_SIZE, MAX_NODE_SIZE, MIN_NODE_SIZE, getDeviceCatalogEntry } from "../../constants/deviceCatalog";
 
 interface NodeInspectorProps {
   node: DeviceNode;
@@ -39,6 +39,19 @@ export function NodeInspector({ node }: NodeInspectorProps) {
           <input type="number" value={Math.round(node.y)} onChange={(e) => updateNode(node.id, { y: Number(e.target.value) })} />
         </label>
       </div>
+
+      <label className="field">
+        <span>Taille (px)</span>
+        <input
+          type="number"
+          min={MIN_NODE_SIZE}
+          max={MAX_NODE_SIZE}
+          value={node.size ?? DEFAULT_NODE_SIZE}
+          onChange={(e) =>
+            updateNode(node.id, { size: Math.min(MAX_NODE_SIZE, Math.max(MIN_NODE_SIZE, Number(e.target.value))) })
+          }
+        />
+      </label>
 
       <div className="field readonly-field">
         <span>Zone rattachée</span>

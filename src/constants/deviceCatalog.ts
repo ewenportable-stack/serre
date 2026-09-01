@@ -33,6 +33,24 @@ export const DEVICE_CATALOG: DeviceCatalogEntry[] = [
     defaultPayloadType: "float",
   },
   {
+    type: "sensor_light",
+    category: "sensor",
+    label: "Capteur de luminosité",
+    description: "Capteur de lumière ambiante (LDR / lux)",
+    color: "#eab308",
+    defaultTopicSuffix: "ambiance/luminosite",
+    defaultPayloadType: "float",
+  },
+  {
+    type: "sensor_temp_humidity",
+    category: "sensor",
+    label: "Capteur température/humidité",
+    description: "Sonde combinée air ambiant (type DHT22 / SHT31)",
+    color: "#0ea5e9",
+    defaultTopicSuffix: "ambiance/temperature_humidite",
+    defaultPayloadType: "json",
+  },
+  {
     type: "actuator_relay_heating",
     category: "actuator",
     label: "Relais chauffage",
@@ -97,3 +115,8 @@ export function getPlantCatalogEntry(species: PlantSpecies): PlantCatalogEntry {
 }
 
 export const DEFAULT_DOOR_WIDTH_METERS = 0.9;
+
+/** Rayon (capteur) / demi-côté (actionneur) par défaut du pictogramme, en px. */
+export const DEFAULT_NODE_SIZE = 12;
+export const MIN_NODE_SIZE = 6;
+export const MAX_NODE_SIZE = 40;

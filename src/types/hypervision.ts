@@ -10,6 +10,8 @@ export type DeviceCategory = "sensor" | "actuator";
 export type DeviceType =
   | "sensor_soil_moisture"
   | "sensor_ds18b20"
+  | "sensor_light"
+  | "sensor_temp_humidity"
   | "actuator_relay_heating"
   | "actuator_valve_watering";
 
@@ -58,6 +60,8 @@ export interface DeviceNode {
   mqtt: MqttConfig;
   /** Identifiant matériel optionnel (ex: MAC ESP32) pour lier au provisioning. */
   deviceId?: string;
+  /** Taille du pictogramme sur le plan, en px (rayon pour un capteur, demi-côté pour un actionneur). */
+  size: number;
 }
 
 export interface GridSettings {

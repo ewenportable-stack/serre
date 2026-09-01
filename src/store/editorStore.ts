@@ -18,6 +18,7 @@ import type {
 } from "../types/hypervision";
 import {
   DEFAULT_DOOR_WIDTH_METERS,
+  DEFAULT_NODE_SIZE,
   getDeviceCatalogEntry,
   ZONE_DEFAULT_COLORS,
 } from "../constants/deviceCatalog";
@@ -254,6 +255,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       rotation: 0,
       zoneId: zone?.id ?? null,
       mqtt: buildDefaultMqtt(type, state.greenhouseName, zone?.id ?? null, state.zones),
+      size: DEFAULT_NODE_SIZE,
     };
     set((s) => ({ nodes: [...s.nodes, node], selection: [{ kind: "node", id }] }));
     return id;
@@ -605,7 +607,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       greenhouseName: config.greenhouse.name,
       grid: { ...DEFAULT_GRID, ...config.greenhouse.grid },
       zones: config.zones,
-      nodes: config.nodes,
+      nodes: config.nodes.map((n) => ({ ...n, size: n.size ?? DEFAULT_NODE_SIZE })),
       doors: config.doors ?? [],
       plants: config.plants ?? [],
       pipes: config.pipes ?? [],
