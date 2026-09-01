@@ -1,4 +1,4 @@
-import type { DeviceCategory, DeviceType, MqttPayloadType } from "../types/hypervision";
+import type { DeviceCategory, DeviceType, MqttPayloadType, PlantSpecies } from "../types/hypervision";
 
 export interface DeviceCatalogEntry {
   type: DeviceType;
@@ -71,3 +71,29 @@ export const ZONE_DEFAULT_COLORS: Record<string, string> = {
   walkway: "#94a3b833",
   technical_area: "#a855f733",
 };
+
+export interface PlantCatalogEntry {
+  species: PlantSpecies;
+  label: string;
+  color: string;
+}
+
+export const PLANT_CATALOG: PlantCatalogEntry[] = [
+  { species: "tomato", label: "Tomate", color: "#dc2626" },
+  { species: "pepper", label: "Poivron", color: "#f59e0b" },
+  { species: "eggplant", label: "Aubergine", color: "#7c3aed" },
+  { species: "cucumber", label: "Concombre", color: "#16a34a" },
+  { species: "zucchini", label: "Courgette", color: "#65a30d" },
+  { species: "potato", label: "Pomme de terre", color: "#a16207" },
+  { species: "bean", label: "Haricot", color: "#059669" },
+];
+
+export function getPlantCatalogEntry(species: PlantSpecies): PlantCatalogEntry {
+  const entry = PLANT_CATALOG.find((p) => p.species === species);
+  if (!entry) {
+    throw new Error(`Espèce de plante inconnue dans le catalogue: ${species}`);
+  }
+  return entry;
+}
+
+export const DEFAULT_DOOR_WIDTH_METERS = 0.9;

@@ -65,11 +65,47 @@ export interface GridSettings {
   columns: number;
   rows: number;
   snapToGrid: boolean;
+  /** Taille réelle d'une cellule, en mètres (permet de fixer les dimensions de la serre). */
+  metersPerCell: number;
 }
 
 export interface GreenhouseMeta {
   name: string;
   grid: GridSettings;
+}
+
+/** Un mur du contour de la serre (rectangle défini par la grille). */
+export type Wall = "north" | "south" | "east" | "west";
+
+/** Une porte/ouverture placée sur un mur du contour. */
+export interface Door {
+  id: string;
+  wall: Wall;
+  /** Distance en mètres depuis le coin de départ du mur (nord/sud: depuis l'ouest ; est/ouest: depuis le nord) jusqu'au centre de la porte. */
+  offsetMeters: number;
+  widthMeters: number;
+  label?: string;
+}
+
+export type PlantSpecies =
+  | "tomato"
+  | "pepper"
+  | "eggplant"
+  | "cucumber"
+  | "zucchini"
+  | "potato"
+  | "bean";
+
+/** Un plant individuel posé sur le plan (ex: un pied de tomate). */
+export interface Plant {
+  id: string;
+  species: PlantSpecies;
+  variety?: string;
+  x: number;
+  y: number;
+  zoneId: string | null;
+  plantedAt?: string;
+  notes?: string;
 }
 
 /** Structure racine exportée par le bouton "Sauvegarder". */
@@ -78,9 +114,11 @@ export interface HypervisionConfig {
   greenhouse: GreenhouseMeta;
   zones: Zone[];
   nodes: DeviceNode[];
+  doors: Door[];
+  plants: Plant[];
 }
 
-export type SelectableKind = "zone" | "node";
+export type SelectableKind = "zone" | "node" | "door" | "plant";
 
 export interface Selection {
   kind: SelectableKind;

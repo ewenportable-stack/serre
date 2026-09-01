@@ -78,6 +78,39 @@ body {
   font-size: 13px;
 }
 
+.dimensions-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dimensions-x {
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.field-inline {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.field-inline input {
+  width: 56px;
+  font-size: 13px;
+  color: var(--text);
+  padding: 5px 6px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  font-family: inherit;
+}
+
+.field-inline .unit {
+  font-size: 12px;
+}
+
 .toolbar-actions {
   margin-left: auto;
   display: flex;
@@ -157,6 +190,35 @@ body {
   display: flex;
   flex-direction: column;
   gap: 6px;
+}
+
+.door-picker {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.door-picker select {
+  flex: 1;
+  font-size: 12px;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+}
+
+.door-picker button {
+  font-size: 12px;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.door-picker button:hover {
+  background: var(--bg);
 }
 
 .palette-item {
