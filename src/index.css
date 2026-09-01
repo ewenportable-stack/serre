@@ -27,10 +27,194 @@ body {
   color: var(--text);
 }
 
-.app-layout {
+.app-shell {
   display: flex;
   flex-direction: column;
   height: 100vh;
+}
+
+.page-tabs {
+  display: flex;
+  gap: 2px;
+  padding: 6px 10px 0;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.page-tabs button {
+  border: none;
+  background: transparent;
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-muted);
+  cursor: pointer;
+  border-radius: 6px 6px 0 0;
+}
+
+.page-tabs button:hover {
+  background: var(--bg);
+}
+
+.page-tabs button.active {
+  background: var(--bg);
+  color: var(--text);
+  box-shadow: inset 0 -2px 0 var(--accent);
+}
+
+.app-layout {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+/* ---------- Live view ---------- */
+
+.live-page {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.live-title {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.live-hint {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.live-canvas-area {
+  flex: 1;
+}
+
+/* ---------- Modal (sensor detail) ---------- */
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+}
+
+.modal-card {
+  background: var(--surface);
+  border-radius: 10px;
+  padding: 20px;
+  width: 460px;
+  max-width: calc(100vw - 40px);
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
+  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.25);
+}
+
+.modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.modal-header h3 {
+  margin: 0 0 2px;
+  font-size: 16px;
+}
+
+.modal-close {
+  border: none;
+  background: transparent;
+  font-size: 20px;
+  line-height: 1;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.modal-close:hover {
+  background: var(--bg);
+  color: var(--text);
+}
+
+.modal-current-value {
+  font-size: 28px;
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+
+.chart-caption {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin: 12px 0 4px;
+}
+
+.modal-meta {
+  margin: 16px 0 8px;
+  font-size: 12px;
+}
+
+.modal-meta div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 4px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.modal-meta dt {
+  color: var(--text-muted);
+}
+
+.modal-meta dd {
+  margin: 0;
+  font-family: ui-monospace, monospace;
+  font-size: 11px;
+  text-align: right;
+  word-break: break-all;
+}
+
+.modal-note {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 12px;
+}
+
+/* ---------- Sensor chart ---------- */
+
+.sensor-chart {
+  position: relative;
+}
+
+.sensor-chart-empty {
+  padding: 24px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.sensor-chart-tooltip {
+  position: absolute;
+  bottom: 4px;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  pointer-events: none;
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+.sensor-chart-tooltip strong {
+  font-size: 12px;
+  color: var(--text);
 }
 
 /* ---------- Toolbar ---------- */

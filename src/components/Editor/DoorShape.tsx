@@ -3,6 +3,7 @@ import type Konva from "konva";
 import type { Door } from "../../types/hypervision";
 import { useEditorStore } from "../../store/editorStore";
 import { clamp } from "../../utils/snap";
+import { doorPixelPosition } from "../../utils/geometry";
 
 interface DoorShapeProps {
   door: Door;
@@ -18,18 +19,9 @@ export function DoorShape({ door, isSelected, pixelsPerMeter, canvasWidth, canva
   const updateDoor = useEditorStore((s) => s.updateDoor);
 
   const widthPx = door.widthMeters * pixelsPerMeter;
-  const offsetPx = door.offsetMeters * pixelsPerMeter;
   const horizontal = door.wall === "north" || door.wall === "south";
   const wallLengthPx = horizontal ? canvasWidth : canvasHeight;
-
-  const pos =
-    door.wall === "north"
-      ? { x: offsetPx, y: 0 }
-      : door.wall === "south"
-        ? { x: offsetPx, y: canvasHeight }
-        : door.wall === "west"
-          ? { x: 0, y: offsetPx }
-          : { x: canvasWidth, y: offsetPx };
+  const pos = doorPixelPosition(door, pixelsPerMeter, canvasWidth, canvasHeight);
 
   const handleSelect = (e: Konva.KonvaEventObject<MouseEvent>) => {
     if (e.evt.shiftKey || e.evt.ctrlKey || e.evt.metaKey) {
