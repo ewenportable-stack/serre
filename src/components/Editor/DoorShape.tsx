@@ -1,4 +1,5 @@
 import { Group, Rect } from "react-konva";
+import type Konva from "konva";
 import type { Door } from "../../types/hypervision";
 import { useEditorStore } from "../../store/editorStore";
 import { clamp } from "../../utils/snap";
@@ -13,6 +14,7 @@ interface DoorShapeProps {
 
 export function DoorShape({ door, isSelected, pixelsPerMeter, canvasWidth, canvasHeight }: DoorShapeProps) {
   const select = useEditorStore((s) => s.select);
+  const toggleSelection = useEditorStore((s) => s.toggleSelection);
   const updateDoor = useEditorStore((s) => s.updateDoor);
 
   const widthPx = door.widthMeters * pixelsPerMeter;
@@ -29,7 +31,13 @@ export function DoorShape({ door, isSelected, pixelsPerMeter, canvasWidth, canva
           ? { x: 0, y: offsetPx }
           : { x: canvasWidth, y: offsetPx };
 
-  const handleSelect = () => select({ kind: "door", id: door.id });
+  const handleSelect = (e: Konva.KonvaEventObject<MouseEvent>) => {
+    if (e.evt.shiftKey || e.evt.ctrlKey || e.evt.metaKey) {
+      toggleSelection({ kind: "door", id: door.id });
+    } else {
+      select({ kind: "door", id: door.id });
+    }
+  };
   const half = widthPx / 2;
 
   return (
@@ -38,7 +46,7 @@ export function DoorShape({ door, isSelected, pixelsPerMeter, canvasWidth, canva
       y={pos.y}
       draggable
       onClick={handleSelect}
-      onTap={handleSelect}
+      onTap={() => select({ kind: "door", id: door.id })}
       dragBoundFunc={(p) =>
         horizontal
           ? { x: clamp(p.x, half, Math.max(half, wallLengthPx - half)), y: pos.y }

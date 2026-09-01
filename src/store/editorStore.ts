@@ -11,6 +11,7 @@ import type {
   PlantSpecies,
   Point,
   Selection,
+  SelectableKind,
   Wall,
   Zone,
   ZoneKind,
@@ -30,6 +31,19 @@ const DEFAULT_GRID: GridSettings = {
   metersPerCell: 0.5,
 };
 
+type ClipboardItem =
+  | { kind: "zone"; data: Zone }
+  | { kind: "node"; data: DeviceNode }
+  | { kind: "door"; data: Door }
+  | { kind: "plant"; data: Plant }
+  | { kind: "pipe"; data: Pipe };
+
+interface GroupDragSnapshot {
+  zones: Record<string, { x: number; y: number }>;
+  nodes: Record<string, { x: number; y: number }>;
+  plants: Record<string, { x: number; y: number }>;
+}
+
 interface EditorState {
   greenhouseName: string;
   grid: GridSettings;
@@ -40,8 +54,10 @@ interface EditorState {
   pipes: Pipe[];
   /** Points déjà posés du tuyau en cours de tracé (null = pas de tracé en cours). */
   pipeDraft: Point[] | null;
-  selection: Selection | null;
-  clipboard: ClipboardItem | null;
+  /** Sélection multiple : chaque élément est une zone, un nœud, une porte, une plante ou un tuyau. */
+  selection: Selection[];
+  clipboard: ClipboardItem[];
+  groupDragSnapshot: GroupDragSnapshot | null;
 
   setGreenhouseName: (name: string) => void;
   setGrid: (grid: Partial<GridSettings>) => void;
@@ -72,22 +88,21 @@ interface EditorState {
   removePipe: (id: string) => void;
 
   select: (selection: Selection | null) => void;
+  toggleSelection: (item: Selection) => void;
+  setSelection: (items: Selection[]) => void;
   removeSelected: () => void;
   copySelected: () => void;
   pasteClipboard: () => void;
   duplicateSelected: () => void;
 
+  beginGroupDrag: () => void;
+  applyGroupDragDelta: (deltaX: number, deltaY: number, excludeKind: SelectableKind, excludeId: string) => void;
+  endGroupDrag: () => void;
+
   exportConfig: () => HypervisionConfig;
   loadConfig: (config: HypervisionConfig) => void;
   reset: () => void;
 }
-
-type ClipboardItem =
-  | { kind: "zone"; data: Zone }
-  | { kind: "node"; data: DeviceNode }
-  | { kind: "door"; data: Door }
-  | { kind: "plant"; data: Plant }
-  | { kind: "pipe"; data: Pipe };
 
 /** Décalage appliqué (en px, ou en mètres pour les portes) à chaque copier-coller, pour ne pas empiler la copie sur l'original. */
 const PASTE_OFFSET_PX = 24;
@@ -156,6 +171,10 @@ function wallLengthMeters(wall: Wall, grid: GridSettings): number {
     : grid.rows * grid.metersPerCell;
 }
 
+function isSameSelection(a: Selection, b: Selection): boolean {
+  return a.kind === b.kind && a.id === b.id;
+}
+
 export const useEditorStore = create<EditorState>((set, get) => ({
   greenhouseName: "Ma serre",
   grid: DEFAULT_GRID,
@@ -165,8 +184,9 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   plants: [],
   pipes: [],
   pipeDraft: null,
-  selection: null,
-  clipboard: null,
+  selection: [],
+  clipboard: [],
+  groupDragSnapshot: null,
 
   setGreenhouseName: (name) => set({ greenhouseName: name }),
   setGrid: (grid) => set((state) => ({ grid: { ...state.grid, ...grid } })),
@@ -202,7 +222,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       rotation: 0,
       color: ZONE_DEFAULT_COLORS[kind] ?? "#84cc1633",
     };
-    set((state) => ({ zones: [...state.zones, zone], selection: { kind: "zone", id } }));
+    set((state) => ({ zones: [...state.zones, zone], selection: [{ kind: "zone", id }] }));
     return id;
   },
 
@@ -216,7 +236,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       zones: state.zones.filter((z) => z.id !== id),
       nodes: state.nodes.map((n) => (n.zoneId === id ? { ...n, zoneId: null } : n)),
       plants: state.plants.map((p) => (p.zoneId === id ? { ...p, zoneId: null } : p)),
-      selection: state.selection?.kind === "zone" && state.selection.id === id ? null : state.selection,
+      selection: state.selection.filter((s) => !(s.kind === "zone" && s.id === id)),
     })),
 
   addNode: (type, position) => {
@@ -235,7 +255,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       zoneId: zone?.id ?? null,
       mqtt: buildDefaultMqtt(type, state.greenhouseName, zone?.id ?? null, state.zones),
     };
-    set((s) => ({ nodes: [...s.nodes, node], selection: { kind: "node", id } }));
+    set((s) => ({ nodes: [...s.nodes, node], selection: [{ kind: "node", id }] }));
     return id;
   },
 
@@ -261,7 +281,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   removeNode: (id) =>
     set((state) => ({
       nodes: state.nodes.filter((n) => n.id !== id),
-      selection: state.selection?.kind === "node" && state.selection.id === id ? null : state.selection,
+      selection: state.selection.filter((s) => !(s.kind === "node" && s.id === id)),
     })),
 
   addDoor: (wall) => {
@@ -277,7 +297,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       widthMeters,
       label: `Porte ${doorCounter}`,
     };
-    set((s) => ({ doors: [...s.doors, door], selection: { kind: "door", id } }));
+    set((s) => ({ doors: [...s.doors, door], selection: [{ kind: "door", id }] }));
     return id;
   },
 
@@ -296,7 +316,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   removeDoor: (id) =>
     set((state) => ({
       doors: state.doors.filter((d) => d.id !== id),
-      selection: state.selection?.kind === "door" && state.selection.id === id ? null : state.selection,
+      selection: state.selection.filter((s) => !(s.kind === "door" && s.id === id)),
     })),
 
   addPlant: (species, position) => {
@@ -310,7 +330,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       y: position.y,
       zoneId: zone?.id ?? null,
     };
-    set((s) => ({ plants: [...s.plants, plant], selection: { kind: "plant", id } }));
+    set((s) => ({ plants: [...s.plants, plant], selection: [{ kind: "plant", id }] }));
     return id;
   },
 
@@ -331,10 +351,10 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   removePlant: (id) =>
     set((state) => ({
       plants: state.plants.filter((p) => p.id !== id),
-      selection: state.selection?.kind === "plant" && state.selection.id === id ? null : state.selection,
+      selection: state.selection.filter((s) => !(s.kind === "plant" && s.id === id)),
     })),
 
-  startPipeDraft: () => set({ pipeDraft: [], selection: null }),
+  startPipeDraft: () => set({ pipeDraft: [], selection: [] }),
 
   addPipeDraftPoint: (point) =>
     set((state) => (state.pipeDraft ? { pipeDraft: [...state.pipeDraft, point] } : state)),
@@ -345,7 +365,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       if (!draft || draft.length < 2) return { pipeDraft: null };
       const id = createId("pipe");
       const pipe: Pipe = { id, points: draft };
-      return { pipes: [...state.pipes, pipe], pipeDraft: null, selection: { kind: "pipe", id } };
+      return { pipes: [...state.pipes, pipe], pipeDraft: null, selection: [{ kind: "pipe", id }] };
     }),
 
   cancelPipeDraft: () => set({ pipeDraft: null }),
@@ -358,97 +378,207 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   removePipe: (id) =>
     set((state) => ({
       pipes: state.pipes.filter((p) => p.id !== id),
-      selection: state.selection?.kind === "pipe" && state.selection.id === id ? null : state.selection,
+      selection: state.selection.filter((s) => !(s.kind === "pipe" && s.id === id)),
     })),
 
-  select: (selection) => set({ selection }),
+  select: (item) => set({ selection: item ? [item] : [] }),
+
+  toggleSelection: (item) =>
+    set((state) => ({
+      selection: state.selection.some((s) => isSameSelection(s, item))
+        ? state.selection.filter((s) => !isSameSelection(s, item))
+        : [...state.selection, item],
+    })),
+
+  setSelection: (items) => set({ selection: items }),
 
   removeSelected: () => {
     const selection = get().selection;
-    if (!selection) return;
-    if (selection.kind === "zone") get().removeZone(selection.id);
-    else if (selection.kind === "node") get().removeNode(selection.id);
-    else if (selection.kind === "door") get().removeDoor(selection.id);
-    else if (selection.kind === "plant") get().removePlant(selection.id);
-    else get().removePipe(selection.id);
+    if (selection.length === 0) return;
+    const zoneIds = new Set(selection.filter((s) => s.kind === "zone").map((s) => s.id));
+    const nodeIds = new Set(selection.filter((s) => s.kind === "node").map((s) => s.id));
+    const doorIds = new Set(selection.filter((s) => s.kind === "door").map((s) => s.id));
+    const plantIds = new Set(selection.filter((s) => s.kind === "plant").map((s) => s.id));
+    const pipeIds = new Set(selection.filter((s) => s.kind === "pipe").map((s) => s.id));
+
+    set((state) => ({
+      zones: state.zones.filter((z) => !zoneIds.has(z.id)),
+      nodes: state.nodes
+        .filter((n) => !nodeIds.has(n.id))
+        .map((n) => (n.zoneId && zoneIds.has(n.zoneId) ? { ...n, zoneId: null } : n)),
+      doors: state.doors.filter((d) => !doorIds.has(d.id)),
+      plants: state.plants
+        .filter((p) => !plantIds.has(p.id))
+        .map((p) => (p.zoneId && zoneIds.has(p.zoneId) ? { ...p, zoneId: null } : p)),
+      pipes: state.pipes.filter((p) => !pipeIds.has(p.id)),
+      selection: [],
+    }));
   },
 
   copySelected: () => {
     const state = get();
-    const selection = state.selection;
-    if (!selection) return;
-    if (selection.kind === "zone") {
-      const zone = state.zones.find((z) => z.id === selection.id);
-      if (zone) set({ clipboard: { kind: "zone", data: zone } });
-    } else if (selection.kind === "node") {
-      const node = state.nodes.find((n) => n.id === selection.id);
-      if (node) set({ clipboard: { kind: "node", data: node } });
-    } else if (selection.kind === "door") {
-      const door = state.doors.find((d) => d.id === selection.id);
-      if (door) set({ clipboard: { kind: "door", data: door } });
-    } else if (selection.kind === "plant") {
-      const plant = state.plants.find((p) => p.id === selection.id);
-      if (plant) set({ clipboard: { kind: "plant", data: plant } });
-    } else {
-      const pipe = state.pipes.find((p) => p.id === selection.id);
-      if (pipe) set({ clipboard: { kind: "pipe", data: pipe } });
+    const items: ClipboardItem[] = [];
+    for (const sel of state.selection) {
+      if (sel.kind === "zone") {
+        const zone = state.zones.find((z) => z.id === sel.id);
+        if (zone) items.push({ kind: "zone", data: zone });
+      } else if (sel.kind === "node") {
+        const node = state.nodes.find((n) => n.id === sel.id);
+        if (node) items.push({ kind: "node", data: node });
+      } else if (sel.kind === "door") {
+        const door = state.doors.find((d) => d.id === sel.id);
+        if (door) items.push({ kind: "door", data: door });
+      } else if (sel.kind === "plant") {
+        const plant = state.plants.find((p) => p.id === sel.id);
+        if (plant) items.push({ kind: "plant", data: plant });
+      } else {
+        const pipe = state.pipes.find((p) => p.id === sel.id);
+        if (pipe) items.push({ kind: "pipe", data: pipe });
+      }
     }
+    if (items.length > 0) set({ clipboard: items });
   },
 
   pasteClipboard: () => {
     const clipboard = get().clipboard;
-    if (!clipboard) return;
+    if (clipboard.length === 0) return;
+    const state = get();
 
-    if (clipboard.kind === "zone") {
-      const id = createId("zone");
-      const src = clipboard.data;
-      const zone: Zone = {
-        ...src,
-        id,
-        x: src.x + PASTE_OFFSET_PX,
-        y: src.y + PASTE_OFFSET_PX,
-        name: `${src.name} (copie)`,
-      };
-      set((state) => ({ zones: [...state.zones, zone], selection: { kind: "zone", id }, clipboard: { kind: "zone", data: zone } }));
-    } else if (clipboard.kind === "node") {
-      const id = createId("node");
-      const src = clipboard.data;
-      const x = src.x + PASTE_OFFSET_PX;
-      const y = src.y + PASTE_OFFSET_PX;
-      const zone = findZoneAtPoint(get().zones, x, y);
-      const node: DeviceNode = { ...src, id, x, y, zoneId: zone?.id ?? null, label: `${src.label} (copie)`, mqtt: { ...src.mqtt } };
-      set((state) => ({ nodes: [...state.nodes, node], selection: { kind: "node", id }, clipboard: { kind: "node", data: node } }));
-    } else if (clipboard.kind === "plant") {
-      const id = createId("plant");
-      const src = clipboard.data;
-      const x = src.x + PASTE_OFFSET_PX;
-      const y = src.y + PASTE_OFFSET_PX;
-      const zone = findZoneAtPoint(get().zones, x, y);
-      const plant: Plant = { ...src, id, x, y, zoneId: zone?.id ?? null };
-      set((state) => ({ plants: [...state.plants, plant], selection: { kind: "plant", id }, clipboard: { kind: "plant", data: plant } }));
-    } else if (clipboard.kind === "door") {
-      const id = createId("door");
-      const src = clipboard.data;
-      const grid = get().grid;
-      const length = wallLengthMeters(src.wall, grid);
-      const half = src.widthMeters / 2;
-      const offsetMeters = Math.min(Math.max(src.offsetMeters + PASTE_OFFSET_METERS, half), Math.max(half, length - half));
-      doorCounter += 1;
-      const door: Door = { ...src, id, offsetMeters, label: src.label ? `${src.label} (copie)` : `Porte ${doorCounter}` };
-      set((state) => ({ doors: [...state.doors, door], selection: { kind: "door", id }, clipboard: { kind: "door", data: door } }));
-    } else {
-      const id = createId("pipe");
-      const src = clipboard.data;
-      const points = src.points.map((p) => ({ x: p.x + PASTE_OFFSET_PX, y: p.y + PASTE_OFFSET_PX }));
-      const pipe: Pipe = { ...src, id, points, label: src.label ? `${src.label} (copie)` : undefined };
-      set((state) => ({ pipes: [...state.pipes, pipe], selection: { kind: "pipe", id }, clipboard: { kind: "pipe", data: pipe } }));
+    const newSelection: Selection[] = [];
+    const newClipboard: ClipboardItem[] = [];
+    const zonesToAdd: Zone[] = [];
+    const nodesToAdd: DeviceNode[] = [];
+    const doorsToAdd: Door[] = [];
+    const plantsToAdd: Plant[] = [];
+    const pipesToAdd: Pipe[] = [];
+
+    for (const item of clipboard) {
+      if (item.kind === "zone") {
+        const id = createId("zone");
+        const src = item.data;
+        const zone: Zone = {
+          ...src,
+          id,
+          x: src.x + PASTE_OFFSET_PX,
+          y: src.y + PASTE_OFFSET_PX,
+          name: `${src.name} (copie)`,
+        };
+        zonesToAdd.push(zone);
+        newSelection.push({ kind: "zone", id });
+        newClipboard.push({ kind: "zone", data: zone });
+      } else if (item.kind === "node") {
+        const id = createId("node");
+        const src = item.data;
+        const x = src.x + PASTE_OFFSET_PX;
+        const y = src.y + PASTE_OFFSET_PX;
+        const zone = findZoneAtPoint(state.zones, x, y);
+        const node: DeviceNode = { ...src, id, x, y, zoneId: zone?.id ?? null, label: `${src.label} (copie)`, mqtt: { ...src.mqtt } };
+        nodesToAdd.push(node);
+        newSelection.push({ kind: "node", id });
+        newClipboard.push({ kind: "node", data: node });
+      } else if (item.kind === "plant") {
+        const id = createId("plant");
+        const src = item.data;
+        const x = src.x + PASTE_OFFSET_PX;
+        const y = src.y + PASTE_OFFSET_PX;
+        const zone = findZoneAtPoint(state.zones, x, y);
+        const plant: Plant = { ...src, id, x, y, zoneId: zone?.id ?? null };
+        plantsToAdd.push(plant);
+        newSelection.push({ kind: "plant", id });
+        newClipboard.push({ kind: "plant", data: plant });
+      } else if (item.kind === "door") {
+        const id = createId("door");
+        const src = item.data;
+        const length = wallLengthMeters(src.wall, state.grid);
+        const half = src.widthMeters / 2;
+        const offsetMeters = Math.min(Math.max(src.offsetMeters + PASTE_OFFSET_METERS, half), Math.max(half, length - half));
+        doorCounter += 1;
+        const door: Door = { ...src, id, offsetMeters, label: src.label ? `${src.label} (copie)` : `Porte ${doorCounter}` };
+        doorsToAdd.push(door);
+        newSelection.push({ kind: "door", id });
+        newClipboard.push({ kind: "door", data: door });
+      } else {
+        const id = createId("pipe");
+        const src = item.data;
+        const points = src.points.map((p) => ({ x: p.x + PASTE_OFFSET_PX, y: p.y + PASTE_OFFSET_PX }));
+        const pipe: Pipe = { ...src, id, points, label: src.label ? `${src.label} (copie)` : undefined };
+        pipesToAdd.push(pipe);
+        newSelection.push({ kind: "pipe", id });
+        newClipboard.push({ kind: "pipe", data: pipe });
+      }
     }
+
+    set((s) => ({
+      zones: [...s.zones, ...zonesToAdd],
+      nodes: [...s.nodes, ...nodesToAdd],
+      doors: [...s.doors, ...doorsToAdd],
+      plants: [...s.plants, ...plantsToAdd],
+      pipes: [...s.pipes, ...pipesToAdd],
+      selection: newSelection,
+      clipboard: newClipboard,
+    }));
   },
 
   duplicateSelected: () => {
     get().copySelected();
     get().pasteClipboard();
   },
+
+  beginGroupDrag: () => {
+    const state = get();
+    if (state.selection.length < 2) return;
+    const zones: Record<string, { x: number; y: number }> = {};
+    const nodes: Record<string, { x: number; y: number }> = {};
+    const plants: Record<string, { x: number; y: number }> = {};
+    for (const sel of state.selection) {
+      if (sel.kind === "zone") {
+        const z = state.zones.find((zz) => zz.id === sel.id);
+        if (z) zones[z.id] = { x: z.x, y: z.y };
+      } else if (sel.kind === "node") {
+        const n = state.nodes.find((nn) => nn.id === sel.id);
+        if (n) nodes[n.id] = { x: n.x, y: n.y };
+      } else if (sel.kind === "plant") {
+        const p = state.plants.find((pp) => pp.id === sel.id);
+        if (p) plants[p.id] = { x: p.x, y: p.y };
+      }
+    }
+    set({ groupDragSnapshot: { zones, nodes, plants } });
+  },
+
+  applyGroupDragDelta: (deltaX, deltaY, excludeKind, excludeId) => {
+    const snapshot = get().groupDragSnapshot;
+    if (!snapshot) return;
+    set((state) => ({
+      zones: state.zones.map((z) => {
+        if (excludeKind === "zone" && z.id === excludeId) return z;
+        const base = snapshot.zones[z.id];
+        return base ? { ...z, x: base.x + deltaX, y: base.y + deltaY } : z;
+      }),
+      nodes: state.nodes.map((n) => {
+        if (excludeKind === "node" && n.id === excludeId) return n;
+        const base = snapshot.nodes[n.id];
+        return base ? { ...n, x: base.x + deltaX, y: base.y + deltaY } : n;
+      }),
+      plants: state.plants.map((p) => {
+        if (excludeKind === "plant" && p.id === excludeId) return p;
+        const base = snapshot.plants[p.id];
+        return base ? { ...p, x: base.x + deltaX, y: base.y + deltaY } : p;
+      }),
+    }));
+  },
+
+  endGroupDrag: () =>
+    set((state) => {
+      const snapshot = state.groupDragSnapshot;
+      if (!snapshot) return { groupDragSnapshot: null };
+      const nodes = state.nodes.map((n) =>
+        snapshot.nodes[n.id] ? { ...n, zoneId: findZoneAtPoint(state.zones, n.x, n.y)?.id ?? null } : n,
+      );
+      const plants = state.plants.map((p) =>
+        snapshot.plants[p.id] ? { ...p, zoneId: findZoneAtPoint(state.zones, p.x, p.y)?.id ?? null } : p,
+      );
+      return { nodes, plants, groupDragSnapshot: null };
+    }),
 
   exportConfig: () => {
     const state = get();
@@ -480,8 +610,9 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       plants: config.plants ?? [],
       pipes: config.pipes ?? [],
       pipeDraft: null,
-      selection: null,
-      clipboard: null,
+      selection: [],
+      clipboard: [],
+      groupDragSnapshot: null,
     });
   },
 
@@ -498,8 +629,9 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       plants: [],
       pipes: [],
       pipeDraft: null,
-      selection: null,
-      clipboard: null,
+      selection: [],
+      clipboard: [],
+      groupDragSnapshot: null,
     });
   },
 }));

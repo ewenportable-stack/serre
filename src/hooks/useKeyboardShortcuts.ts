@@ -6,8 +6,8 @@ const EDITABLE_TAGS = new Set(["INPUT", "TEXTAREA", "SELECT"]);
 export function useKeyboardShortcuts() {
   const removeSelected = useEditorStore((s) => s.removeSelected);
   const select = useEditorStore((s) => s.select);
-  const hasSelection = useEditorStore((s) => s.selection !== null);
-  const hasClipboard = useEditorStore((s) => s.clipboard !== null);
+  const hasSelection = useEditorStore((s) => s.selection.length > 0);
+  const hasClipboard = useEditorStore((s) => s.clipboard.length > 0);
   const copySelected = useEditorStore((s) => s.copySelected);
   const pasteClipboard = useEditorStore((s) => s.pasteClipboard);
   const isDrawingPipe = useEditorStore((s) => s.pipeDraft !== null);

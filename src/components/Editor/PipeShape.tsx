@@ -1,4 +1,5 @@
 import { Circle, Group, Line } from "react-konva";
+import type Konva from "konva";
 import type { Pipe } from "../../types/hypervision";
 import { useEditorStore } from "../../store/editorStore";
 
@@ -9,10 +10,17 @@ interface PipeShapeProps {
 
 export function PipeShape({ pipe, isSelected }: PipeShapeProps) {
   const select = useEditorStore((s) => s.select);
+  const toggleSelection = useEditorStore((s) => s.toggleSelection);
   const updatePipe = useEditorStore((s) => s.updatePipe);
 
   const flatPoints = pipe.points.flatMap((p) => [p.x, p.y]);
-  const handleSelect = () => select({ kind: "pipe", id: pipe.id });
+  const handleSelect = (e: Konva.KonvaEventObject<MouseEvent>) => {
+    if (e.evt.shiftKey || e.evt.ctrlKey || e.evt.metaKey) {
+      toggleSelection({ kind: "pipe", id: pipe.id });
+    } else {
+      select({ kind: "pipe", id: pipe.id });
+    }
+  };
 
   return (
     <Group>
@@ -24,7 +32,7 @@ export function PipeShape({ pipe, isSelected }: PipeShapeProps) {
         lineJoin="round"
         hitStrokeWidth={16}
         onClick={handleSelect}
-        onTap={handleSelect}
+        onTap={() => select({ kind: "pipe", id: pipe.id })}
       />
       {isSelected &&
         pipe.points.map((pt, i) => (
