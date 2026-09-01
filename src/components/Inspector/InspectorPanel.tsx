@@ -3,6 +3,7 @@ import { ZoneInspector } from "./ZoneInspector";
 import { NodeInspector } from "./NodeInspector";
 import { DoorInspector } from "./DoorInspector";
 import { PlantInspector } from "./PlantInspector";
+import { PipeInspector } from "./PipeInspector";
 
 export function InspectorPanel() {
   const selection = useEditorStore((s) => s.selection);
@@ -10,6 +11,7 @@ export function InspectorPanel() {
   const nodes = useEditorStore((s) => s.nodes);
   const doors = useEditorStore((s) => s.doors);
   const plants = useEditorStore((s) => s.plants);
+  const pipes = useEditorStore((s) => s.pipes);
 
   if (!selection) {
     return (
@@ -45,6 +47,16 @@ export function InspectorPanel() {
     return (
       <aside className="inspector">
         <PlantInspector plant={plant} />
+      </aside>
+    );
+  }
+
+  if (selection.kind === "pipe") {
+    const pipe = pipes.find((p) => p.id === selection.id);
+    if (!pipe) return null;
+    return (
+      <aside className="inspector">
+        <PipeInspector pipe={pipe} />
       </aside>
     );
   }

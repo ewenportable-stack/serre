@@ -22,6 +22,8 @@ const WALL_OPTIONS: { wall: Wall; label: string }[] = [
 export function DevicePalette() {
   const addZone = useEditorStore((s) => s.addZone);
   const addDoor = useEditorStore((s) => s.addDoor);
+  const startPipeDraft = useEditorStore((s) => s.startPipeDraft);
+  const isDrawingPipe = useEditorStore((s) => s.pipeDraft !== null);
   const [doorWall, setDoorWall] = useState<Wall>("south");
 
   const handleDeviceDragStart = (event: React.DragEvent<HTMLDivElement>, type: DeviceType) => {
@@ -68,6 +70,15 @@ export function DevicePalette() {
           </button>
         </div>
         <p className="palette-hint">Glisser une porte le long de son mur une fois posée</p>
+      </section>
+
+      <section className="palette-section">
+        <h3>Réseau d'arrosage</h3>
+        <p className="palette-hint">Tracer un tuyau point par point sur le plan</p>
+        <button type="button" className="palette-item palette-zone" onClick={() => startPipeDraft()} disabled={isDrawingPipe}>
+          <span className="palette-swatch" style={{ background: "#0891b2", borderRadius: 3 }} />
+          {isDrawingPipe ? "Tracé en cours..." : "Tracer un tuyau"}
+        </button>
       </section>
 
       <section className="palette-section">

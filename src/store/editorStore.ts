@@ -6,8 +6,10 @@ import type {
   GridSettings,
   HypervisionConfig,
   MqttConfig,
+  Pipe,
   Plant,
   PlantSpecies,
+  Point,
   Selection,
   Wall,
   Zone,
@@ -24,7 +26,7 @@ const DEFAULT_GRID: GridSettings = {
   cellSize: 40,
   columns: 24,
   rows: 16,
-  snapToGrid: true,
+  snapToGrid: false,
   metersPerCell: 0.5,
 };
 
@@ -35,6 +37,9 @@ interface EditorState {
   nodes: DeviceNode[];
   doors: Door[];
   plants: Plant[];
+  pipes: Pipe[];
+  /** Points déjà posés du tuyau en cours de tracé (null = pas de tracé en cours). */
+  pipeDraft: Point[] | null;
   selection: Selection | null;
 
   setGreenhouseName: (name: string) => void;
@@ -57,6 +62,13 @@ interface EditorState {
   addPlant: (species: PlantSpecies, position: { x: number; y: number }) => string;
   updatePlant: (id: string, patch: Partial<Plant>) => void;
   removePlant: (id: string) => void;
+
+  startPipeDraft: () => void;
+  addPipeDraftPoint: (point: Point) => void;
+  finishPipeDraft: () => void;
+  cancelPipeDraft: () => void;
+  updatePipe: (id: string, patch: Partial<Pipe>) => void;
+  removePipe: (id: string) => void;
 
   select: (selection: Selection | null) => void;
   removeSelected: () => void;
@@ -136,6 +148,8 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   nodes: [],
   doors: [],
   plants: [],
+  pipes: [],
+  pipeDraft: null,
   selection: null,
 
   setGreenhouseName: (name) => set({ greenhouseName: name }),
@@ -304,6 +318,33 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       selection: state.selection?.kind === "plant" && state.selection.id === id ? null : state.selection,
     })),
 
+  startPipeDraft: () => set({ pipeDraft: [], selection: null }),
+
+  addPipeDraftPoint: (point) =>
+    set((state) => (state.pipeDraft ? { pipeDraft: [...state.pipeDraft, point] } : state)),
+
+  finishPipeDraft: () =>
+    set((state) => {
+      const draft = state.pipeDraft;
+      if (!draft || draft.length < 2) return { pipeDraft: null };
+      const id = createId("pipe");
+      const pipe: Pipe = { id, points: draft };
+      return { pipes: [...state.pipes, pipe], pipeDraft: null, selection: { kind: "pipe", id } };
+    }),
+
+  cancelPipeDraft: () => set({ pipeDraft: null }),
+
+  updatePipe: (id, patch) =>
+    set((state) => ({
+      pipes: state.pipes.map((p) => (p.id === id ? { ...p, ...patch } : p)),
+    })),
+
+  removePipe: (id) =>
+    set((state) => ({
+      pipes: state.pipes.filter((p) => p.id !== id),
+      selection: state.selection?.kind === "pipe" && state.selection.id === id ? null : state.selection,
+    })),
+
   select: (selection) => set({ selection }),
 
   removeSelected: () => {
@@ -312,7 +353,8 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     if (selection.kind === "zone") get().removeZone(selection.id);
     else if (selection.kind === "node") get().removeNode(selection.id);
     else if (selection.kind === "door") get().removeDoor(selection.id);
-    else get().removePlant(selection.id);
+    else if (selection.kind === "plant") get().removePlant(selection.id);
+    else get().removePipe(selection.id);
   },
 
   exportConfig: () => {
@@ -327,6 +369,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       nodes: state.nodes,
       doors: state.doors,
       plants: state.plants,
+      pipes: state.pipes,
     };
     return config;
   },
@@ -342,6 +385,8 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       nodes: config.nodes,
       doors: config.doors ?? [],
       plants: config.plants ?? [],
+      pipes: config.pipes ?? [],
+      pipeDraft: null,
       selection: null,
     });
   },
@@ -357,6 +402,8 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       nodes: [],
       doors: [],
       plants: [],
+      pipes: [],
+      pipeDraft: null,
       selection: null,
     });
   },

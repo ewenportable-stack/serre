@@ -108,6 +108,15 @@ export interface Plant {
   notes?: string;
 }
 
+/** Un tuyau d'arrosage : une ligne brisée reliant plusieurs points du plan. */
+export interface Pipe {
+  id: string;
+  points: Point[];
+  diameterMm?: number;
+  label?: string;
+  notes?: string;
+}
+
 /** Structure racine exportée par le bouton "Sauvegarder". */
 export interface HypervisionConfig {
   version: 1;
@@ -116,9 +125,10 @@ export interface HypervisionConfig {
   nodes: DeviceNode[];
   doors: Door[];
   plants: Plant[];
+  pipes: Pipe[];
 }
 
-export type SelectableKind = "zone" | "node" | "door" | "plant";
+export type SelectableKind = "zone" | "node" | "door" | "plant" | "pipe";
 
 export interface Selection {
   kind: SelectableKind;

@@ -14,6 +14,7 @@ export function Toolbar() {
   const nodeCount = useEditorStore((s) => s.nodes.length);
   const plantCount = useEditorStore((s) => s.plants.length);
   const doorCount = useEditorStore((s) => s.doors.length);
+  const pipeCount = useEditorStore((s) => s.pipes.length);
 
   const widthMeters = Math.round(grid.columns * grid.metersPerCell * 10) / 10;
   const heightMeters = Math.round(grid.rows * grid.metersPerCell * 10) / 10;
@@ -96,6 +97,7 @@ export function Toolbar() {
         <span>{plantCount} plante(s)</span>
         <span>{nodeCount} équipement(s)</span>
         <span>{doorCount} porte(s)</span>
+        <span>{pipeCount} tuyau(x)</span>
       </div>
 
       <div className="toolbar-actions">
