@@ -6,6 +6,7 @@ import { GridLayer } from "../Editor/GridLayer";
 import { LiveActuatorShape } from "./LiveActuatorShape";
 import { LiveSensorShape } from "./LiveSensorShape";
 import { SensorDetailModal } from "./SensorDetailModal";
+import { ActuatorDetailModal } from "./ActuatorDetailModal";
 import { getPlantCatalogEntry } from "../../constants/deviceCatalog";
 import { doorPixelPosition } from "../../utils/geometry";
 
@@ -19,8 +20,9 @@ export function LiveCanvas() {
   const pipes = useEditorStore((s) => s.pipes);
   const nodes = useEditorStore((s) => s.nodes);
   const tick = useLiveStore((s) => s.tick);
+  const tickActuators = useLiveStore((s) => s.tickActuators);
 
-  const [selectedSensorId, setSelectedSensorId] = useState<string | null>(null);
+  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
 
   const canvasWidth = grid.columns * grid.cellSize;
   const canvasHeight = grid.rows * grid.cellSize;
@@ -30,17 +32,25 @@ export function LiveCanvas() {
     .filter((n) => n.category === "sensor")
     .map((n) => `${n.id}:${n.type}`)
     .join(",");
+  const actuatorIdsKey = nodes
+    .filter((n) => n.category === "actuator")
+    .map((n) => n.id)
+    .join(",");
 
   useEffect(() => {
     const sensorNodes = nodes.filter((n) => n.category === "sensor").map((n) => ({ id: n.id, type: n.type }));
-    if (sensorNodes.length === 0) return;
-    tick(sensorNodes);
-    const interval = setInterval(() => tick(sensorNodes), TICK_INTERVAL_MS);
+    const actuatorIds = nodes.filter((n) => n.category === "actuator").map((n) => n.id);
+    const runTick = () => {
+      if (sensorNodes.length > 0) tick(sensorNodes);
+      if (actuatorIds.length > 0) tickActuators(actuatorIds);
+    };
+    runTick();
+    const interval = setInterval(runTick, TICK_INTERVAL_MS);
     return () => clearInterval(interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sensorNodesKey, tick]);
+  }, [sensorNodesKey, actuatorIdsKey, tick, tickActuators]);
 
-  const selectedNode = selectedSensorId ? (nodes.find((n) => n.id === selectedSensorId) ?? null) : null;
+  const selectedNode = selectedNodeId ? (nodes.find((n) => n.id === selectedNodeId) ?? null) : null;
 
   return (
     <div className="editor-canvas-wrapper">
@@ -88,14 +98,19 @@ export function LiveCanvas() {
         <Layer>
           {nodes.map((node) =>
             node.category === "actuator" ? (
-              <LiveActuatorShape key={node.id} node={node} />
+              <LiveActuatorShape key={node.id} node={node} onOpen={() => setSelectedNodeId(node.id)} />
             ) : (
-              <LiveSensorShape key={node.id} node={node} onOpen={() => setSelectedSensorId(node.id)} />
+              <LiveSensorShape key={node.id} node={node} onOpen={() => setSelectedNodeId(node.id)} />
             ),
           )}
         </Layer>
       </Stage>
-      {selectedNode && <SensorDetailModal node={selectedNode} onClose={() => setSelectedSensorId(null)} />}
+      {selectedNode &&
+        (selectedNode.category === "actuator" ? (
+          <ActuatorDetailModal node={selectedNode} onClose={() => setSelectedNodeId(null)} />
+        ) : (
+          <SensorDetailModal node={selectedNode} onClose={() => setSelectedNodeId(null)} />
+        ))}
     </div>
   );
 }

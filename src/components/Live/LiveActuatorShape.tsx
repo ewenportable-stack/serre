@@ -2,18 +2,18 @@ import { Circle, Group, Rect, Text } from "react-konva";
 import type Konva from "konva";
 import type { DeviceNode } from "../../types/hypervision";
 import { DEFAULT_NODE_SIZE, getDeviceCatalogEntry } from "../../constants/deviceCatalog";
-import { useLiveStore } from "../../store/liveStore";
+import { useIsActuatorOn } from "../../store/liveStore";
 
 interface LiveActuatorShapeProps {
   node: DeviceNode;
+  onOpen: () => void;
 }
 
 const ON_COLOR = "#16a34a";
 const OFF_COLOR = "#94a3b8";
 
-export function LiveActuatorShape({ node }: LiveActuatorShapeProps) {
-  const isOn = useLiveStore((s) => s.actuatorOn[node.id] ?? false);
-  const toggleActuator = useLiveStore((s) => s.toggleActuator);
+export function LiveActuatorShape({ node, onOpen }: LiveActuatorShapeProps) {
+  const isOn = useIsActuatorOn(node.id);
   const entry = getDeviceCatalogEntry(node.type);
   const radius = node.size ?? DEFAULT_NODE_SIZE;
 
@@ -23,14 +23,7 @@ export function LiveActuatorShape({ node }: LiveActuatorShapeProps) {
   };
 
   return (
-    <Group
-      x={node.x}
-      y={node.y}
-      onClick={() => toggleActuator(node.id)}
-      onTap={() => toggleActuator(node.id)}
-      onMouseEnter={setCursor("pointer")}
-      onMouseLeave={setCursor("default")}
-    >
+    <Group x={node.x} y={node.y} onClick={onOpen} onTap={onOpen} onMouseEnter={setCursor("pointer")} onMouseLeave={setCursor("default")}>
       {isOn && <Circle radius={radius + 6} fill={entry.color} opacity={0.25} listening={false} />}
       <Rect
         x={-radius}
