@@ -2,7 +2,11 @@ import { useEffect, useRef, useState } from "react";
 import { useEditorStore } from "../../store/editorStore";
 import { downloadConfig, parseConfigFile } from "../../utils/export";
 
-export function Toolbar() {
+interface ToolbarProps {
+  onBackToLive: () => void;
+}
+
+export function Toolbar({ onBackToLive }: ToolbarProps) {
   const greenhouseName = useEditorStore((s) => s.greenhouseName);
   const setGreenhouseName = useEditorStore((s) => s.setGreenhouseName);
   const grid = useEditorStore((s) => s.grid);
@@ -117,6 +121,10 @@ export function Toolbar() {
 
         <button type="button" className="primary-button" onClick={handleSave}>
           Sauvegarder
+        </button>
+
+        <button type="button" className="live-view-button" onClick={onBackToLive}>
+          📡 Vue live
         </button>
       </div>
     </header>

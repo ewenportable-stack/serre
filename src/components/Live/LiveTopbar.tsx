@@ -1,6 +1,10 @@
 import { useEditorStore } from "../../store/editorStore";
 
-export function LiveTopbar() {
+interface LiveTopbarProps {
+  onEdit: () => void;
+}
+
+export function LiveTopbar({ onEdit }: LiveTopbarProps) {
   const greenhouseName = useEditorStore((s) => s.greenhouseName);
   const zoneCount = useEditorStore((s) => s.zones.length);
   const nodeCount = useEditorStore((s) => s.nodes.length);
@@ -17,6 +21,9 @@ export function LiveTopbar() {
       </div>
       <div className="toolbar-actions">
         <span className="live-hint">Cliquez un actionneur pour l'activer · cliquez un capteur pour son détail</span>
+        <button type="button" className="live-view-button" onClick={onEdit}>
+          ✏️ Modifier la serre
+        </button>
       </div>
     </header>
   );

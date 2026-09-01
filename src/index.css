@@ -33,34 +33,15 @@ body {
   height: 100vh;
 }
 
-.page-tabs {
-  display: flex;
-  gap: 2px;
-  padding: 6px 10px 0;
+.live-view-button {
+  border: 1px solid var(--accent) !important;
   background: var(--surface);
-  border-bottom: 1px solid var(--border);
-  flex-shrink: 0;
+  color: var(--accent-dark);
+  font-weight: 600;
 }
 
-.page-tabs button {
-  border: none;
-  background: transparent;
-  padding: 8px 14px;
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--text-muted);
-  cursor: pointer;
-  border-radius: 6px 6px 0 0;
-}
-
-.page-tabs button:hover {
-  background: var(--bg);
-}
-
-.page-tabs button.active {
-  background: var(--bg);
-  color: var(--text);
-  box-shadow: inset 0 -2px 0 var(--accent);
+.live-view-button:hover {
+  background: #f0fdf4;
 }
 
 .app-layout {
@@ -647,6 +628,9 @@ body {
   overflow: auto;
   background: var(--bg);
   padding: 24px;
+  display: flex;
+  align-items: safe center;
+  justify-content: safe center;
 }
 
 .editor-canvas-wrapper {

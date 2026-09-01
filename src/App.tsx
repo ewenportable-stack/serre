@@ -5,19 +5,15 @@ import { LivePage } from "./components/Live/LivePage";
 type Page = "editor" | "live";
 
 function App() {
-  const [page, setPage] = useState<Page>("editor");
+  const [page, setPage] = useState<Page>("live");
 
   return (
     <div className="app-shell">
-      <nav className="page-tabs">
-        <button type="button" className={page === "editor" ? "active" : ""} onClick={() => setPage("editor")}>
-          🧩 Éditeur
-        </button>
-        <button type="button" className={page === "live" ? "active" : ""} onClick={() => setPage("live")}>
-          📡 Vue live
-        </button>
-      </nav>
-      {page === "editor" ? <AppLayout /> : <LivePage />}
+      {page === "editor" ? (
+        <AppLayout onBackToLive={() => setPage("live")} />
+      ) : (
+        <LivePage onEdit={() => setPage("editor")} />
+      )}
     </div>
   );
 }

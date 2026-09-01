@@ -4,12 +4,16 @@ import { EditorCanvas } from "../Editor/EditorCanvas";
 import { InspectorPanel } from "../Inspector/InspectorPanel";
 import { useKeyboardShortcuts } from "../../hooks/useKeyboardShortcuts";
 
-export function AppLayout() {
+interface AppLayoutProps {
+  onBackToLive: () => void;
+}
+
+export function AppLayout({ onBackToLive }: AppLayoutProps) {
   useKeyboardShortcuts();
 
   return (
     <div className="app-layout">
-      <Toolbar />
+      <Toolbar onBackToLive={onBackToLive} />
       <div className="app-body">
         <DevicePalette />
         <main className="canvas-area">
