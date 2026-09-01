@@ -11,6 +11,7 @@ const ZONE_KINDS: ZoneKind[] = ["culture_bed", "walkway", "technical_area"];
 export function ZoneInspector({ zone }: ZoneInspectorProps) {
   const updateZone = useEditorStore((s) => s.updateZone);
   const removeZone = useEditorStore((s) => s.removeZone);
+  const duplicateSelected = useEditorStore((s) => s.duplicateSelected);
 
   return (
     <div className="inspector-form">
@@ -72,9 +73,14 @@ export function ZoneInspector({ zone }: ZoneInspectorProps) {
         />
       </label>
 
-      <button type="button" className="danger-button" onClick={() => removeZone(zone.id)}>
-        Supprimer la zone
-      </button>
+      <div className="inspector-actions">
+        <button type="button" className="secondary-button" onClick={() => duplicateSelected()}>
+          Dupliquer
+        </button>
+        <button type="button" className="danger-button" onClick={() => removeZone(zone.id)}>
+          Supprimer la zone
+        </button>
+      </div>
     </div>
   );
 }

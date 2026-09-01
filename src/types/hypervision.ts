@@ -10,6 +10,8 @@ export type DeviceCategory = "sensor" | "actuator";
 export type DeviceType =
   | "sensor_soil_moisture"
   | "sensor_ds18b20"
+  | "sensor_light"
+  | "sensor_temp_humidity"
   | "actuator_relay_heating"
   | "actuator_valve_watering";
 
@@ -58,6 +60,8 @@ export interface DeviceNode {
   mqtt: MqttConfig;
   /** Identifiant matériel optionnel (ex: MAC ESP32) pour lier au provisioning. */
   deviceId?: string;
+  /** Taille du pictogramme sur le plan, en px (rayon pour un capteur, demi-côté pour un actionneur). */
+  size: number;
 }
 
 export interface GridSettings {
@@ -65,11 +69,56 @@ export interface GridSettings {
   columns: number;
   rows: number;
   snapToGrid: boolean;
+  /** Taille réelle d'une cellule, en mètres (permet de fixer les dimensions de la serre). */
+  metersPerCell: number;
 }
 
 export interface GreenhouseMeta {
   name: string;
   grid: GridSettings;
+}
+
+/** Un mur du contour de la serre (rectangle défini par la grille). */
+export type Wall = "north" | "south" | "east" | "west";
+
+/** Une porte/ouverture placée sur un mur du contour. */
+export interface Door {
+  id: string;
+  wall: Wall;
+  /** Distance en mètres depuis le coin de départ du mur (nord/sud: depuis l'ouest ; est/ouest: depuis le nord) jusqu'au centre de la porte. */
+  offsetMeters: number;
+  widthMeters: number;
+  label?: string;
+}
+
+export type PlantSpecies =
+  | "tomato"
+  | "pepper"
+  | "eggplant"
+  | "cucumber"
+  | "zucchini"
+  | "potato"
+  | "bean";
+
+/** Un plant individuel posé sur le plan (ex: un pied de tomate). */
+export interface Plant {
+  id: string;
+  species: PlantSpecies;
+  variety?: string;
+  x: number;
+  y: number;
+  zoneId: string | null;
+  plantedAt?: string;
+  notes?: string;
+}
+
+/** Un tuyau d'arrosage : une ligne brisée reliant plusieurs points du plan. */
+export interface Pipe {
+  id: string;
+  points: Point[];
+  diameterMm?: number;
+  label?: string;
+  notes?: string;
 }
 
 /** Structure racine exportée par le bouton "Sauvegarder". */
@@ -78,9 +127,12 @@ export interface HypervisionConfig {
   greenhouse: GreenhouseMeta;
   zones: Zone[];
   nodes: DeviceNode[];
+  doors: Door[];
+  plants: Plant[];
+  pipes: Pipe[];
 }
 
-export type SelectableKind = "zone" | "node";
+export type SelectableKind = "zone" | "node" | "door" | "plant" | "pipe";
 
 export interface Selection {
   kind: SelectableKind;

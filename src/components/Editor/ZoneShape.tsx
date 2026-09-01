@@ -17,7 +17,14 @@ export function ZoneShape({ zone, isSelected, canvasWidth, canvasHeight }: ZoneS
   const trRef = useRef<Konva.Transformer>(null);
   const grid = useEditorStore((s) => s.grid);
   const select = useEditorStore((s) => s.select);
+  const toggleSelection = useEditorStore((s) => s.toggleSelection);
   const updateZone = useEditorStore((s) => s.updateZone);
+  const selectionCount = useEditorStore((s) => s.selection.length);
+  const beginGroupDrag = useEditorStore((s) => s.beginGroupDrag);
+  const applyGroupDragDelta = useEditorStore((s) => s.applyGroupDragDelta);
+  const endGroupDrag = useEditorStore((s) => s.endGroupDrag);
+
+  const isGroupDrag = isSelected && selectionCount > 1;
 
   useEffect(() => {
     if (isSelected && trRef.current && rectRef.current) {
@@ -28,12 +35,17 @@ export function ZoneShape({ zone, isSelected, canvasWidth, canvasHeight }: ZoneS
 
   const strokeColor = zone.kind === "culture_bed" ? "#65a30d" : zone.kind === "walkway" ? "#64748b" : "#9333ea";
 
+  const handleSelect = (e: Konva.KonvaEventObject<MouseEvent>) => {
+    if (e.evt.shiftKey || e.evt.ctrlKey || e.evt.metaKey) {
+      toggleSelection({ kind: "zone", id: zone.id });
+    } else {
+      select({ kind: "zone", id: zone.id });
+    }
+  };
+
   return (
     <>
-      <Group
-        onClick={() => select({ kind: "zone", id: zone.id })}
-        onTap={() => select({ kind: "zone", id: zone.id })}
-      >
+      <Group onClick={handleSelect} onTap={() => select({ kind: "zone", id: zone.id })}>
         <Rect
           ref={rectRef}
           x={zone.x}
@@ -49,8 +61,17 @@ export function ZoneShape({ zone, isSelected, canvasWidth, canvasHeight }: ZoneS
             x: clamp(snapValue(pos.x, grid.cellSize, grid.snapToGrid), 0, canvasWidth - zone.width),
             y: clamp(snapValue(pos.y, grid.cellSize, grid.snapToGrid), 0, canvasHeight - zone.height),
           })}
+          onDragStart={() => {
+            if (isGroupDrag) beginGroupDrag();
+          }}
+          onDragMove={(e) => {
+            if (isGroupDrag) {
+              applyGroupDragDelta(e.target.x() - zone.x, e.target.y() - zone.y, "zone", zone.id);
+            }
+          }}
           onDragEnd={(e) => {
             updateZone(zone.id, { x: e.target.x(), y: e.target.y() });
+            if (isGroupDrag) endGroupDrag();
           }}
           onTransformEnd={() => {
             const node = rectRef.current;
