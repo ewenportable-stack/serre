@@ -6,6 +6,10 @@ const EDITABLE_TAGS = new Set(["INPUT", "TEXTAREA", "SELECT"]);
 export function useKeyboardShortcuts() {
   const removeSelected = useEditorStore((s) => s.removeSelected);
   const select = useEditorStore((s) => s.select);
+  const hasSelection = useEditorStore((s) => s.selection !== null);
+  const hasClipboard = useEditorStore((s) => s.clipboard !== null);
+  const copySelected = useEditorStore((s) => s.copySelected);
+  const pasteClipboard = useEditorStore((s) => s.pasteClipboard);
   const isDrawingPipe = useEditorStore((s) => s.pipeDraft !== null);
   const finishPipeDraft = useEditorStore((s) => s.finishPipeDraft);
   const cancelPipeDraft = useEditorStore((s) => s.cancelPipeDraft);
@@ -26,7 +30,19 @@ export function useKeyboardShortcuts() {
         return;
       }
 
-      if (e.key === "Delete" || e.key === "Backspace") {
+      const meta = e.ctrlKey || e.metaKey;
+
+      if (meta && e.key.toLowerCase() === "c") {
+        if (hasSelection) {
+          e.preventDefault();
+          copySelected();
+        }
+      } else if (meta && e.key.toLowerCase() === "v") {
+        if (hasClipboard) {
+          e.preventDefault();
+          pasteClipboard();
+        }
+      } else if (e.key === "Delete" || e.key === "Backspace") {
         e.preventDefault();
         removeSelected();
       } else if (e.key === "Escape") {
@@ -36,5 +52,15 @@ export function useKeyboardShortcuts() {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [removeSelected, select, isDrawingPipe, finishPipeDraft, cancelPipeDraft]);
+  }, [
+    removeSelected,
+    select,
+    isDrawingPipe,
+    finishPipeDraft,
+    cancelPipeDraft,
+    hasSelection,
+    hasClipboard,
+    copySelected,
+    pasteClipboard,
+  ]);
 }

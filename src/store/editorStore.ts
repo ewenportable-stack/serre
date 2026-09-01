@@ -41,6 +41,7 @@ interface EditorState {
   /** Points déjà posés du tuyau en cours de tracé (null = pas de tracé en cours). */
   pipeDraft: Point[] | null;
   selection: Selection | null;
+  clipboard: ClipboardItem | null;
 
   setGreenhouseName: (name: string) => void;
   setGrid: (grid: Partial<GridSettings>) => void;
@@ -72,11 +73,25 @@ interface EditorState {
 
   select: (selection: Selection | null) => void;
   removeSelected: () => void;
+  copySelected: () => void;
+  pasteClipboard: () => void;
+  duplicateSelected: () => void;
 
   exportConfig: () => HypervisionConfig;
   loadConfig: (config: HypervisionConfig) => void;
   reset: () => void;
 }
+
+type ClipboardItem =
+  | { kind: "zone"; data: Zone }
+  | { kind: "node"; data: DeviceNode }
+  | { kind: "door"; data: Door }
+  | { kind: "plant"; data: Plant }
+  | { kind: "pipe"; data: Pipe };
+
+/** Décalage appliqué (en px, ou en mètres pour les portes) à chaque copier-coller, pour ne pas empiler la copie sur l'original. */
+const PASTE_OFFSET_PX = 24;
+const PASTE_OFFSET_METERS = 0.5;
 
 let zoneCounter = 0;
 let nodeCounters: Partial<Record<DeviceType, number>> = {};
@@ -151,6 +166,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   pipes: [],
   pipeDraft: null,
   selection: null,
+  clipboard: null,
 
   setGreenhouseName: (name) => set({ greenhouseName: name }),
   setGrid: (grid) => set((state) => ({ grid: { ...state.grid, ...grid } })),
@@ -357,6 +373,83 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     else get().removePipe(selection.id);
   },
 
+  copySelected: () => {
+    const state = get();
+    const selection = state.selection;
+    if (!selection) return;
+    if (selection.kind === "zone") {
+      const zone = state.zones.find((z) => z.id === selection.id);
+      if (zone) set({ clipboard: { kind: "zone", data: zone } });
+    } else if (selection.kind === "node") {
+      const node = state.nodes.find((n) => n.id === selection.id);
+      if (node) set({ clipboard: { kind: "node", data: node } });
+    } else if (selection.kind === "door") {
+      const door = state.doors.find((d) => d.id === selection.id);
+      if (door) set({ clipboard: { kind: "door", data: door } });
+    } else if (selection.kind === "plant") {
+      const plant = state.plants.find((p) => p.id === selection.id);
+      if (plant) set({ clipboard: { kind: "plant", data: plant } });
+    } else {
+      const pipe = state.pipes.find((p) => p.id === selection.id);
+      if (pipe) set({ clipboard: { kind: "pipe", data: pipe } });
+    }
+  },
+
+  pasteClipboard: () => {
+    const clipboard = get().clipboard;
+    if (!clipboard) return;
+
+    if (clipboard.kind === "zone") {
+      const id = createId("zone");
+      const src = clipboard.data;
+      const zone: Zone = {
+        ...src,
+        id,
+        x: src.x + PASTE_OFFSET_PX,
+        y: src.y + PASTE_OFFSET_PX,
+        name: `${src.name} (copie)`,
+      };
+      set((state) => ({ zones: [...state.zones, zone], selection: { kind: "zone", id }, clipboard: { kind: "zone", data: zone } }));
+    } else if (clipboard.kind === "node") {
+      const id = createId("node");
+      const src = clipboard.data;
+      const x = src.x + PASTE_OFFSET_PX;
+      const y = src.y + PASTE_OFFSET_PX;
+      const zone = findZoneAtPoint(get().zones, x, y);
+      const node: DeviceNode = { ...src, id, x, y, zoneId: zone?.id ?? null, label: `${src.label} (copie)`, mqtt: { ...src.mqtt } };
+      set((state) => ({ nodes: [...state.nodes, node], selection: { kind: "node", id }, clipboard: { kind: "node", data: node } }));
+    } else if (clipboard.kind === "plant") {
+      const id = createId("plant");
+      const src = clipboard.data;
+      const x = src.x + PASTE_OFFSET_PX;
+      const y = src.y + PASTE_OFFSET_PX;
+      const zone = findZoneAtPoint(get().zones, x, y);
+      const plant: Plant = { ...src, id, x, y, zoneId: zone?.id ?? null };
+      set((state) => ({ plants: [...state.plants, plant], selection: { kind: "plant", id }, clipboard: { kind: "plant", data: plant } }));
+    } else if (clipboard.kind === "door") {
+      const id = createId("door");
+      const src = clipboard.data;
+      const grid = get().grid;
+      const length = wallLengthMeters(src.wall, grid);
+      const half = src.widthMeters / 2;
+      const offsetMeters = Math.min(Math.max(src.offsetMeters + PASTE_OFFSET_METERS, half), Math.max(half, length - half));
+      doorCounter += 1;
+      const door: Door = { ...src, id, offsetMeters, label: src.label ? `${src.label} (copie)` : `Porte ${doorCounter}` };
+      set((state) => ({ doors: [...state.doors, door], selection: { kind: "door", id }, clipboard: { kind: "door", data: door } }));
+    } else {
+      const id = createId("pipe");
+      const src = clipboard.data;
+      const points = src.points.map((p) => ({ x: p.x + PASTE_OFFSET_PX, y: p.y + PASTE_OFFSET_PX }));
+      const pipe: Pipe = { ...src, id, points, label: src.label ? `${src.label} (copie)` : undefined };
+      set((state) => ({ pipes: [...state.pipes, pipe], selection: { kind: "pipe", id }, clipboard: { kind: "pipe", data: pipe } }));
+    }
+  },
+
+  duplicateSelected: () => {
+    get().copySelected();
+    get().pasteClipboard();
+  },
+
   exportConfig: () => {
     const state = get();
     const config: HypervisionConfig = {
@@ -388,6 +481,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       pipes: config.pipes ?? [],
       pipeDraft: null,
       selection: null,
+      clipboard: null,
     });
   },
 
@@ -405,6 +499,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       pipes: [],
       pipeDraft: null,
       selection: null,
+      clipboard: null,
     });
   },
 }));

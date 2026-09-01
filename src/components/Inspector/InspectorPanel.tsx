@@ -17,6 +17,7 @@ export function InspectorPanel() {
     return (
       <aside className="inspector inspector-empty">
         <p>Sélectionnez une zone, une porte ou un équipement sur le plan pour l'éditer.</p>
+        <p className="inspector-shortcut-hint">Ctrl/⌘+C puis Ctrl/⌘+V pour copier-coller un élément sélectionné.</p>
       </aside>
     );
   }

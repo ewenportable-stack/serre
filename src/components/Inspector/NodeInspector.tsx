@@ -12,6 +12,7 @@ export function NodeInspector({ node }: NodeInspectorProps) {
   const updateNode = useEditorStore((s) => s.updateNode);
   const updateNodeMqtt = useEditorStore((s) => s.updateNodeMqtt);
   const removeNode = useEditorStore((s) => s.removeNode);
+  const duplicateSelected = useEditorStore((s) => s.duplicateSelected);
   const zones = useEditorStore((s) => s.zones);
   const entry = getDeviceCatalogEntry(node.type);
 
@@ -103,9 +104,14 @@ export function NodeInspector({ node }: NodeInspectorProps) {
         <span>Retain</span>
       </label>
 
-      <button type="button" className="danger-button" onClick={() => removeNode(node.id)}>
-        Supprimer le nœud
-      </button>
+      <div className="inspector-actions">
+        <button type="button" className="secondary-button" onClick={() => duplicateSelected()}>
+          Dupliquer
+        </button>
+        <button type="button" className="danger-button" onClick={() => removeNode(node.id)}>
+          Supprimer le nœud
+        </button>
+      </div>
     </div>
   );
 }

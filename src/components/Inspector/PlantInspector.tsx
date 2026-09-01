@@ -9,6 +9,7 @@ interface PlantInspectorProps {
 export function PlantInspector({ plant }: PlantInspectorProps) {
   const updatePlant = useEditorStore((s) => s.updatePlant);
   const removePlant = useEditorStore((s) => s.removePlant);
+  const duplicateSelected = useEditorStore((s) => s.duplicateSelected);
   const zones = useEditorStore((s) => s.zones);
   const entry = getPlantCatalogEntry(plant.species);
   const zone = zones.find((z) => z.id === plant.zoneId);
@@ -57,9 +58,14 @@ export function PlantInspector({ plant }: PlantInspectorProps) {
         <textarea rows={3} value={plant.notes ?? ""} onChange={(e) => updatePlant(plant.id, { notes: e.target.value })} />
       </label>
 
-      <button type="button" className="danger-button" onClick={() => removePlant(plant.id)}>
-        Supprimer la plante
-      </button>
+      <div className="inspector-actions">
+        <button type="button" className="secondary-button" onClick={() => duplicateSelected()}>
+          Dupliquer
+        </button>
+        <button type="button" className="danger-button" onClick={() => removePlant(plant.id)}>
+          Supprimer la plante
+        </button>
+      </div>
     </div>
   );
 }

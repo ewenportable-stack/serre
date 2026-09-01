@@ -8,6 +8,7 @@ interface PipeInspectorProps {
 export function PipeInspector({ pipe }: PipeInspectorProps) {
   const updatePipe = useEditorStore((s) => s.updatePipe);
   const removePipe = useEditorStore((s) => s.removePipe);
+  const duplicateSelected = useEditorStore((s) => s.duplicateSelected);
 
   return (
     <div className="inspector-form">
@@ -39,9 +40,14 @@ export function PipeInspector({ pipe }: PipeInspectorProps) {
         <textarea rows={3} value={pipe.notes ?? ""} onChange={(e) => updatePipe(pipe.id, { notes: e.target.value })} />
       </label>
 
-      <button type="button" className="danger-button" onClick={() => removePipe(pipe.id)}>
-        Supprimer le tuyau
-      </button>
+      <div className="inspector-actions">
+        <button type="button" className="secondary-button" onClick={() => duplicateSelected()}>
+          Dupliquer
+        </button>
+        <button type="button" className="danger-button" onClick={() => removePipe(pipe.id)}>
+          Supprimer le tuyau
+        </button>
+      </div>
     </div>
   );
 }

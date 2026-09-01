@@ -11,6 +11,7 @@ const WALL_LABELS: Record<Wall, string> = { north: "Nord", south: "Sud", east: "
 export function DoorInspector({ door }: DoorInspectorProps) {
   const updateDoor = useEditorStore((s) => s.updateDoor);
   const removeDoor = useEditorStore((s) => s.removeDoor);
+  const duplicateSelected = useEditorStore((s) => s.duplicateSelected);
 
   return (
     <div className="inspector-form">
@@ -58,9 +59,14 @@ export function DoorInspector({ door }: DoorInspectorProps) {
         />
       </label>
 
-      <button type="button" className="danger-button" onClick={() => removeDoor(door.id)}>
-        Supprimer la porte
-      </button>
+      <div className="inspector-actions">
+        <button type="button" className="secondary-button" onClick={() => duplicateSelected()}>
+          Dupliquer
+        </button>
+        <button type="button" className="danger-button" onClick={() => removeDoor(door.id)}>
+          Supprimer la porte
+        </button>
+      </div>
     </div>
   );
 }
